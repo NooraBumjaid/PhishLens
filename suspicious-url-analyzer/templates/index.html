@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suspicious URL Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <main class="card">
+        <h1>Suspicious URL Analyzer</h1>
+        <p>
+            This tool analyzes website URLs for suspicious security indicators.
+        </p>
+        {% if error %}
+        <p class="error">{{ error }}</p>
+        {% endif %}
+        <form action="/analyze" method="post">
+            <label for="url">Website URL</label>
+            <input
+                type="text"
+                id="url"
+                name="url"
+                placeholder="https://example.com"
+                required
+            >
+            <button type="submit">Analyze URL</button>
+        </form>
+    </main>
+</body>
+</html>

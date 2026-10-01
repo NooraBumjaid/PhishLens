@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <main class="card">
+        <section class="risk-summary {% if risk.classification == 'Low Risk' %}low-risk{% elif risk.classification == 'Suspicious' %}suspicious{% else %}high-risk{% endif %}">
+            <h1>Risk Score</h1>
+            <p class="risk-score"><span>{{ risk.final_score }}</span> / 100</p>
+            <p class="classification">{{ risk.classification }}</p>
+            <p class="recommendation">{{ risk.recommendation }}</p>
+            <p class="score-note">The risk score is a rule-based assessment and should not be interpreted as a probability that the website is malicious.</p>
+            {% if scan_id %}
+            <p class="scan-id">Scan ID: #{{ scan_id }}</p>
+            {% endif %}
+            {% if save_error %}
+            <p class="error">{{ save_error }}</p>
+            {% endif %}
+        </section>
+
+        <h2>Score Breakdown</h2>
+        <div class="breakdown">
+            <div class="breakdown-row">
+                <span>Base Score</span>
+                <span>{{ risk.base_score }}</span>
+            </div>
+            <p class="breakdown-label">Detected indicators</p>
+            {% for indicator in indicators %}
+            <div class="breakdown-row">
+                <span>{{ indicator.title }}</span>
+                <span>{% if indicator.score_change > 0 %}+{% endif %}{{ indicator.score_change }}</span>
+            </div>
+            {% else %}
+            <p>No indicator contributions.</p>
+            {% endfor %}
+            <p class="breakdown-label">Correlation factors</p>
+            <p class="correlation-note">Correlation factors represent combinations of existing indicators that may be more concerning when they occur together.</p>
+            {% for correlation in risk.correlations %}
+            <div class="breakdown-row">
+                <span>{{ correlation.title }}</span>
+                <span>{% if correlation.score_change > 0 %}+{% endif %}{{ correlation.score_change }}</span>
+            </div>
+            <p class="correlation-explanation">{{ correlation.explanation }}</p>
+            {% else %}
+            <p>No correlation factors.</p>
+            {% endfor %}
+            <div class="breakdown-row breakdown-total">
+                <span>Raw Score</span>
+                <span>{{ risk.raw_score }}</span>
+            </div>
+            <div class="breakdown-row">
+                <span>Final Risk Score</span>
+                <span>{{ risk.final_score }}/100</span>
+            </div>
+        </div>
+
+        <h2>Security Indicators</h2>
+        {% if indicators %}
+            {% for indicator in indicators %}
+            <article class="indicator {{ indicator.severity }}">
+                <div class="indicator-header">
+                    <h3>{{ indicator.title }}</h3>
+                    <span class="score">{% if indicator.score_change > 0 %}+{% endif %}{{ indicator.score_change }}</span>
+                </div>
+                {% if indicator.evidence %}
+                <p class="evidence">{{ indicator.evidence }}</p>
+                {% endif %}
+                <p>{{ indicator.explanation }}</p>
+            </article>
+            {% endfor %}
+        {% else %}
+            <p>No security indicators were detected for these rules.</p>
+        {% endif %}
+
+        <h2>External Reputation</h2>
+        <p class="reputation-status">{{ reputation.message }}</p>
+
+        <h2>Parsed URL</h2>
+        <dl class="details">
+            <div>
+                <dt>Submitted URL</dt>
+                <dd>{{ parsed.submitted_url }}</dd>
+            </div>
+            <div>
+                <dt>Normalized URL</dt>
+                <dd>{{ parsed.normalized_url }}</dd>
+            </div>
+            <div>
+                <dt>Scheme</dt>
+                <dd>{{ parsed.scheme }}</dd>
+            </div>
+            <div>
+                <dt>Hostname</dt>
+                <dd>{{ parsed.hostname }}</dd>
+            </div>
+            <div>
+                <dt>Port</dt>
+                <dd>{% if parsed.port is not none %}{{ parsed.port }}{% else %}Not present{% endif %}</dd>
+            </div>
+            <div>
+                <dt>Path</dt>
+                <dd>{% if parsed.path %}{{ parsed.path }}{% else %}Not present{% endif %}</dd>
+            </div>
+            <div>
+                <dt>Query</dt>
+                <dd>{% if parsed.query %}{{ parsed.query }}{% else %}Not present{% endif %}</dd>
+            </div>
+        </dl>
+
+        <a class="button" href="{{ url_for('index') }}">Analyze Another URL</a>
+    </main>
+</body>
+</html>
