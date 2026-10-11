@@ -1,0 +1,66 @@
+# PhishLens — repository root ignores
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+.cache/
+*.egg-info/
+dist/
+build/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+database/*.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+tmp/
+temp/
+instance/
+
+# IDE / OS
+.idea/
+.vscode/
+*.code-workspace
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local sample / generator artifacts (not part of the app)
+_sample_pdfs/
+_generate_sample_pdfs.py
+
+# Local recovery / scratch trees (not part of the published app)
+_recovered_tests/
+
+# One-off local reorg markers
+.reorg_backup_path.txt

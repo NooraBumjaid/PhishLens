@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}PhishLens | Scan Not Found{% endblock %}
+
+{% block content %}
+<main class="page page-home">
+        <section class="panel analyzer-card empty-panel">
+            {% if load_error %}
+            <h1>Scan could not be loaded</h1>
+            <p>The saved result could not be read. Please try again.</p>
+            {% else %}
+            <h1>Scan not found</h1>
+            <p>The requested scan does not exist or is no longer available.</p>
+            {% endif %}
+            <a class="button button-lift" href="{{ url_for('history') }}">Back to Scan History</a>
+        </section>
+    </main>
+{% endblock %}

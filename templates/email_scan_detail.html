@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}PhishLens | Saved Email Scan{% endblock %}
+
+{% block body_class %}email-results-page{% endblock %}
+
+{% block content %}
+<main class="page page-home page-email-results email-results">
+        {% set indicator_count = security.indicators|length %}
+        {% set correlation_count = risk.correlations|length %}
+        {% set link_count = namespace(suspicious=0) %}
+        {% for item in security.embedded_urls %}
+            {% if item.classification == "Suspicious" or item.classification == "High Risk" %}
+                {% set link_count.suspicious = link_count.suspicious + 1 %}
+            {% endif %}
+        {% endfor %}
+
+        <header class="results-intro">
+            <p class="hero-pill">Stored result • Not re-analyzed</p>
+            <h1>Saved <span class="hero-emphasis">Email Scan</span></h1>
+        </header>
+
+        <p class="notice security-notice score-note" role="status">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <rect x="6" y="10.5" width="12" height="9" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M8.5 10.5V8.2a3.5 3.5 0 0 1 7 0v2.3"/>
+            </svg>
+            <span><strong>Stored Analysis</strong> — This page displays the email result stored when the scan was originally performed. The email has not been re-analyzed.</span>
+        </p>
+
+        <section class="score-card assessment-card assessment-summary {% if risk.classification == 'Low Risk' %}low-risk{% elif risk.classification == 'Suspicious' %}suspicious{% else %}high-risk{% endif %}" aria-labelledby="email-risk-heading">
+            <h2 id="email-risk-heading" class="score-kicker">
+                <svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v6c0 4.2-2.8 7.4-7 9-4.2-1.6-7-4.8-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+                Email Risk Assessment
+            </h2>
+            <div class="assessment-focus">
+                <p class="score-caption">Email Risk Score</p>
+                <p class="risk-score"><span>{{ risk.final_score }}</span> / 100</p>
+                <p class="classification"><span class="classification-badge">{{ risk.classification }}</span></p>
+            </div>
+            <div class="risk-meter" role="img" aria-label="Email risk score {{ risk.final_score }} out of 100, {{ risk.classification }}. The scale marks Low Risk through 30, Suspicious through 60, and High Risk through 100.">
+                <div class="risk-meter-track">
+                    <span class="risk-zone risk-zone-low"></span>
+                    <span class="risk-zone risk-zone-suspicious"></span>
+                    <span class="risk-zone risk-zone-high"></span>
+                    <span class="risk-meter-marker {% if risk.final_score < 8 %}is-start{% elif risk.final_score > 92 %}is-end{% endif %}" style="left: {{ risk.final_score }}%;">
+                        <span class="risk-meter-value">{{ risk.final_score }}</span>
+                    </span>
+                </div>
+                <div class="risk-meter-scale" aria-hidden="true">
+                    <span class="scale-0">0<span>Low Risk</span></span>
+                    <span class="scale-30">30<span>Suspicious</span></span>
+                    <span class="scale-60">60<span>High Risk</span></span>
+                    <span class="scale-100">100</span>
+                </div>
+            </div>
+            {% if risk.recommendation %}
+            <p class="recommendation">{{ risk.recommendation }}</p>
+            {% endif %}
+            <ul class="finding-pills">
+                <li>{{ indicator_count }} Security Indicator{% if indicator_count != 1 %}s{% endif %}</li>
+                <li>{{ correlation_count }} Correlation Factor{% if correlation_count != 1 %}s{% endif %}</li>
+                <li>{{ link_count.suspicious }} Suspicious Embedded Link{% if link_count.suspicious != 1 %}s{% endif %}</li>
+            </ul>
+            <p class="score-note">The email risk score is a rule-based assessment and should not be interpreted as a probability that the email is phishing.</p>
+            <p class="scan-id">Scan ID: #{{ scan.id }} · Analyzed {{ scan.created_at | format_timestamp }}</p>
+        </section>
+
+        <details class="full-analysis-details">
+            <summary class="full-analysis-summary">
+                <span class="summary-label-closed">View Full Analysis Report</span>
+                <span class="summary-label-open">Hide Full Analysis Report</span>
+            </summary>
+            <div id="email-full-analysis" class="full-analysis-report full-analysis">
+            <header class="report-intro">
+                <h2 class="report-title">Full Analysis Report</h2>
+                <p class="report-lead">This report shows the stored score breakdown, indicators, correlations, and selected metadata from the original scan.</p>
+            </header>
+
+            <section class="panel">
+                <h2>
+                    <svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9M10 19V5M15 19v-7M20 19V8"/></svg>
+                    Email Score Breakdown
+                </h2>
+                <div class="breakdown">
+                    <div class="breakdown-row">
+                        <span>Base Score</span>
+                        <span class="points-badge is-neutral">{{ risk.base_score }}</span>
+                    </div>
+                    <p class="breakdown-label">Indicators</p>
+                    {% for item in risk.indicator_contributions %}
+                    <div class="breakdown-row">
+                        <span>{{ item.title }}</span>
+                        <span class="points-badge{% if item.score_change == 0 %} is-neutral{% endif %}">{% if item.score_change > 0 %}+{% endif %}{{ item.score_change }}</span>
+                    </div>
+                    {% else %}
+                    <p class="breakdown-empty">No indicator contributions.</p>
+                    {% endfor %}
+                    <p class="breakdown-label">Correlations</p>
+                    <p class="correlation-note">Each combination is counted once.</p>
+                    {% for correlation in risk.correlations %}
+                    <article class="correlation-item">
+                        <div class="breakdown-row">
+                            <span>{{ correlation.title }}</span>
+                            <span class="points-badge">{% if correlation.score_change > 0 %}+{% endif %}{{ correlation.score_change }}</span>
+                        </div>
+                        <p class="correlation-explanation">{{ correlation.explanation }}</p>
+                    </article>
+                    {% else %}
+                    <p class="breakdown-empty">No correlation factors.</p>
+                    {% endfor %}
+                    <div class="breakdown-totals">
+                        <div class="breakdown-row breakdown-total">
+                            <span>Raw Score</span>
+                            <span>{{ risk.raw_score }}</span>
+                        </div>
+                        <div class="breakdown-row breakdown-final">
+                            <span>Final Risk Score</span>
+                            <span>{{ risk.final_score }}/100</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <h2>
+                    <svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l8 14H4L12 4z"/><path d="M12 10v4M12 16.5v.5"/></svg>
+                    Security Indicators
+                </h2>
+                {% if security.indicators %}
+                    {% for indicator in security.indicators %}
+                    <article class="indicator severity-{{ indicator.severity }}">
+                        <div class="indicator-header">
+                            <h3>{{ indicator.title }}</h3>
+                            <span class="badge severity-badge severity-{{ indicator.severity }}">{{ indicator.severity|capitalize }}</span>
+                        </div>
+                        <p>{{ indicator.explanation }}</p>
+                        {% if indicator.evidence %}
+                        <div class="evidence-box">
+                            <p class="evidence-label">Evidence</p>
+                            <p class="evidence">{{ indicator.evidence }}</p>
+                        </div>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                {% else %}
+                <p>No security indicators were identified for these rules.</p>
+                {% endif %}
+            </section>
+
+            <section class="panel">
+                <h2>
+                    <svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 1 0-7l1.5-1.5a5 5 0 0 1 7 7L17 13"/><path d="M14 11a5 5 0 0 1 0 7L12.5 19.5a5 5 0 0 1-7-7L7 11"/></svg>
+                    Embedded Link Analysis
+                </h2>
+                <p class="score-note">Each card below is a stored local URL risk score. It is separate from the email risk score above. PhishLens does not visit these destinations.</p>
+                {% if security.embedded_urls %}
+                    {% for item in security.embedded_urls %}
+                    <article class="link-card {% if item.classification == 'Low Risk' %}low-risk{% elif item.classification == 'Suspicious' %}suspicious{% else %}high-risk{% endif %}">
+                        <p class="link-kicker">Embedded Link</p>
+                        <p class="link-url">{{ item.url }}</p>
+                        <dl class="link-facts">
+                            <div>
+                                <dt>Local URL Risk Score</dt>
+                                <dd>{{ item.score }} / 100</dd>
+                            </div>
+                            <div>
+                                <dt>Classification</dt>
+                                <dd><span class="badge {% if item.classification == 'Low Risk' %}risk-low{% elif item.classification == 'Suspicious' %}risk-suspicious{% else %}risk-high{% endif %}">{{ item.classification }}</span></dd>
+                            </div>
+                        </dl>
+                        <h3>Detected URL Indicators</h3>
+                        {% if item.indicators %}
+                        <ul class="plain-list">
+                            {% for url_indicator in item.indicators %}
+                            <li>{{ url_indicator.title }}{% if url_indicator.evidence %}: {{ url_indicator.evidence }}{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p>No stored URL indicator details were available for this link.</p>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                {% else %}
+                <p>No URLs were found.</p>
+                {% endif %}
+            </section>
+
+            <section class="panel technical-panel">
+                <h2>
+                    <svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
+                    Stored Email Metadata
+                </h2>
+                <p class="privacy-note">PhishLens does not retain the full email body in Scan History. Raw HTML is also not retained.</p>
+
+                <details class="tech-details">
+                    <summary>
+                        <svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/></svg>
+                        Stored Headers
+                    </summary>
+                    <div class="tech-body">
+                        <dl class="details details-columns">
+                            <div>
+                                <dt>From</dt>
+                                <dd>{{ scan.email_from or "Not present" }}</dd>
+                            </div>
+                            <div>
+                                <dt>To</dt>
+                                <dd>{{ scan.email_to or "Not present" }}</dd>
+                            </div>
+                            <div>
+                                <dt>Subject</dt>
+                                <dd>{{ scan.email_subject or scan.target or "Not present" }}</dd>
+                            </div>
+                            <div>
+                                <dt>Email Date</dt>
+                                <dd>{{ scan.email_date or "Not present" }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </details>
+
+                <details class="tech-details">
+                    <summary>
+                        <svg class="section-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12.5l6.5-6.5a3 3 0 0 1 4 4L11 17.5a4 4 0 0 1-6-6L12 4.5"/></svg>
+                        Attachments
+                    </summary>
+                    <div class="tech-body">
+                        <p class="privacy-note">Attachment contents are not stored.</p>
+                        {% if attachments %}
+                            {% for attachment in attachments %}
+                            <article class="indicator">
+                                <dl class="details details-columns">
+                                    <div>
+                                        <dt>Filename</dt>
+                                        <dd>{{ attachment.filename or "Not present" }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Content Type</dt>
+                                        <dd>{{ attachment.content_type or "Not present" }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Size</dt>
+                                        <dd>
+                                            {% if attachment.size is none %}
+                                            Not present
+                                            {% elif attachment.size < 1024 %}
+                                            {{ attachment.size }} bytes
+                                            {% else %}
+                                            {{ "%0.1f"|format(attachment.size / 1024) }} KB
+                                            {% endif %}
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </article>
+                            {% endfor %}
+                        {% else %}
+                        <p>No attachments detected.</p>
+                        {% endif %}
+                    </div>
+                </details>
+            </section>
+
+            <div class="actions">
+                <a class="button button-lift" href="{{ url_for('history') }}">Back to Scan History</a>
+                <a class="button button-secondary" href="{{ url_for('scan_report', scan_id=scan.id) }}">Download Report (PDF)</a>
+                <a class="button button-secondary" href="{{ url_for('email') }}">Analyze Another Email</a>
+            </div>
+            </div>
+        </details>
+    </main>
+{% endblock %}

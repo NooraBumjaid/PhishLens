@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}PhishLens | Security Dashboard{% endblock %}
+
+{% block content %}
+<main class="page page-dashboard">
+        <section class="hero hero-page hero-dashboard">
+            <div class="hero-decor" aria-hidden="true"></div>
+            <p class="hero-pill">Local analytics • Stored analyses only</p>
+            <h1>Security <span class="hero-emphasis">Dashboard</span></h1>
+            <p class="hero-lead">Overview of your local PhishLens analyses.</p>
+        </section>
+
+        {% if load_error %}
+        <p class="alert alert-error" role="alert">Security dashboard could not be loaded.</p>
+        {% else %}
+        <div class="dashboard-stat-grid" aria-label="Analysis summary">
+            <article class="dashboard-stat-card">
+                <p class="dashboard-stat-label">
+                    <span class="dashboard-stat-icon" aria-hidden="true">◉</span>
+                    Total Scans
+                </p>
+                <p class="dashboard-stat-value">{{ summary.total }}</p>
+                <p class="dashboard-stat-note">All analyses</p>
+            </article>
+            <article class="dashboard-stat-card">
+                <p class="dashboard-stat-label">
+                    <span class="dashboard-stat-icon" aria-hidden="true">◈</span>
+                    URL Scans
+                </p>
+                <p class="dashboard-stat-value">{{ summary.url_scans }}</p>
+                <p class="dashboard-stat-note">URL Analyzer</p>
+            </article>
+            <article class="dashboard-stat-card">
+                <p class="dashboard-stat-label">
+                    <span class="dashboard-stat-icon" aria-hidden="true">✉</span>
+                    Email Scans
+                </p>
+                <p class="dashboard-stat-value">{{ summary.email_scans }}</p>
+                <p class="dashboard-stat-note">Email Analyzer</p>
+            </article>
+            <article class="dashboard-stat-card">
+                <p class="dashboard-stat-label">
+                    <span class="dashboard-stat-icon" aria-hidden="true">◎</span>
+                    Average Risk Score
+                </p>
+                {% if summary.average_risk is not none %}
+                <p class="dashboard-stat-value">{{ summary.average_risk }} <span class="dashboard-stat-suffix">/ 100</span></p>
+                {% else %}
+                <p class="dashboard-stat-value">—</p>
+                {% endif %}
+                <p class="dashboard-stat-note">Mean of stored scores</p>
+            </article>
+        </div>
+
+        {% if is_empty %}
+        <section class="dashboard-empty empty-panel" aria-label="Empty dashboard">
+            <h2>No analyses yet.</h2>
+            <p>Analyze a URL or email to start building your dashboard.</p>
+            <div class="dashboard-empty-actions empty-actions">
+                <a class="button button-lift" href="{{ url_for('url_analyzer') }}">Analyze a URL</a>
+                <a class="button button-secondary" href="{{ url_for('email') }}">Analyze an Email</a>
+            </div>
+        </section>
+        {% else %}
+        {% if summary.total %}
+        <div class="type-compare" aria-label="URL versus Email distribution">
+            <div class="type-compare-labels">
+                <span>URL {{ summary.url_scans }}</span>
+                <span>Email {{ summary.email_scans }}</span>
+            </div>
+            <div class="type-compare-track" role="img" aria-label="URL {{ summary.url_scans }}, Email {{ summary.email_scans }}">
+                <span class="type-compare-url" style="width: {{ (100 * summary.url_scans / summary.total)|round(2) }}%;"></span>
+                <span class="type-compare-email" style="width: {{ (100 * summary.email_scans / summary.total)|round(2) }}%;"></span>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="dashboard-charts">
+            <section class="dashboard-panel" aria-labelledby="risk-distribution-heading">
+                <h2 id="risk-distribution-heading">Final Assessment Distribution</h2>
+                <div class="risk-distribution">
+                    <div
+                        class="risk-donut"
+                        style="--low-pct: {{ risk_segments.low_pct }}; --suspicious-pct: {{ risk_segments.suspicious_pct }}; --high-pct: {{ risk_segments.high_pct }};"
+                        role="img"
+                        aria-label="Low Risk {{ summary.low_risk }}, Suspicious {{ summary.suspicious }}, High Risk {{ summary.high_risk }}"
+                    >
+                        <span class="risk-donut-hole" aria-hidden="true"></span>
+                    </div>
+                    <ul class="risk-legend">
+                        <li class="risk-legend-low">
+                            <span class="risk-swatch" aria-hidden="true"></span>
+                            <span>Low Risk</span>
+                            <strong>{{ summary.low_risk }}</strong>
+                        </li>
+                        <li class="risk-legend-suspicious">
+                            <span class="risk-swatch" aria-hidden="true"></span>
+                            <span>Suspicious</span>
+                            <strong>{{ summary.suspicious }}</strong>
+                        </li>
+                        <li class="risk-legend-high">
+                            <span class="risk-swatch" aria-hidden="true"></span>
+                            <span>High Risk</span>
+                            <strong>{{ summary.high_risk }}</strong>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="dashboard-panel" aria-labelledby="activity-heading">
+                <h2 id="activity-heading">7-Day Analysis Activity</h2>
+                <p class="dashboard-panel-note">Daily scan counts for the last 7 UTC days.</p>
+                <div class="activity-chart" role="img" aria-label="Analysis activity over the last 7 UTC days">
+                    {% for day in activity %}
+                    <div class="activity-bar-wrap">
+                        <span class="activity-count">{{ day.total }}</span>
+                        <div class="activity-bar-track">
+                            <div
+                                class="activity-bar"
+                                style="height: {% if activity_max %}{{ (100 * day.total / activity_max)|round(2) }}{% else %}0{% endif %}%;"
+                            ></div>
+                        </div>
+                        <span class="activity-label">{{ day.label }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <ul class="visually-hidden">
+                    {% for day in activity %}
+                    <li>{{ day.label }}: {{ day.total }}</li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </div>
+
+        <section class="dashboard-panel" aria-labelledby="indicators-heading">
+                <h2 id="indicators-heading">Common Indicators</h2>
+            {% if indicators %}
+            <ul class="indicator-stats">
+                {% for item in indicators %}
+                <li>
+                    <div class="indicator-stat-main">
+                        <span class="indicator-stat-title">{{ item.title }}</span>
+                        {% if item.source_type and item.source_type != 'Mixed' %}
+                        <span class="indicator-stat-type">{{ item.source_type }}</span>
+                        {% elif item.source_type == 'Mixed' %}
+                        <span class="indicator-stat-type">URL &amp; Email</span>
+                        {% endif %}
+                    </div>
+                    <span class="indicator-stat-count">{{ item.scan_count }} {% if item.scan_count == 1 %}scan{% else %}scans{% endif %}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="dashboard-muted">No security indicators have been recorded yet.</p>
+            {% endif %}
+        </section>
+
+        <section class="dashboard-panel" aria-labelledby="recent-heading">
+            <h2 id="recent-heading">Recent Analyses</h2>
+            <div class="recent-table-wrap">
+                <table class="recent-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Type</th>
+                            <th scope="col">Target / Subject</th>
+                            <th scope="col">Risk Score</th>
+                            <th scope="col">Classification</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">View</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for scan in recent_scans %}
+                        <tr>
+                            <td>
+                                <span class="badge type-badge type-{{ scan.scan_type }}">{{ scan.scan_type | upper }}</span>
+                            </td>
+                            <td>
+                                <span class="recent-target" title="{{ scan.display_target }}">{{ scan.display_target }}</span>
+                            </td>
+                            <td>{{ scan.risk_score }}</td>
+                            <td>
+                                <span class="classification-text classification-{{ scan.classification | lower | replace(' ', '-') }}">{{ scan.classification }}</span>
+                            </td>
+                            <td>{{ scan.date_label }}</td>
+                            <td>
+                                <a class="button button-secondary button-compact" href="{{ url_for('scan_detail', scan_id=scan.id) }}">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="dashboard-history-link">
+                <a class="button button-lift" href="{{ url_for('history') }}">View Full Scan History</a>
+            </p>
+        </section>
+        {% endif %}
+        {% endif %}
+    </main>
+{% endblock %}

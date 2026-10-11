@@ -1,0 +1,154 @@
+{# Sole Page Content Analysis card. States depend on destination + page_inspection. #}
+{% set page_scan_id = scan.id if (scan is defined and scan) else scan_id %}
+{% set page = page_inspection if page_inspection is defined else none %}
+{% set page_status = (page.status if page else '')|lower %}
+{% set dest = redirect_inspection if redirect_inspection is defined else none %}
+{% set dest_status = (dest.status if dest else '')|lower %}
+
+<section class="panel page-content-analysis-panel" aria-label="Page content analysis">
+    <h2>Page Content Analysis</h2>
+
+    {% if page_status == 'completed' %}
+    <p class="inspection-status-line">
+        <span class="status-check" aria-hidden="true">✓</span>
+        <strong>Completed</strong>
+    </p>
+    <p class="coverage-alert-note">
+        Page content was inspected statically. JavaScript and remote resources were not executed or loaded.
+    </p>
+    {% if page.limited_static_content %}
+    <p class="coverage-alert-note">
+        Limited static content was available. This page may rely on JavaScript, which PhishLens does not execute.
+    </p>
+    {% endif %}
+    {% if page.truncated %}
+    <p class="coverage-alert-note">
+        The HTML response reached PhishLens’s download limit. Analysis used only the retrieved prefix.
+    </p>
+    {% endif %}
+
+    <dl class="details">
+        <div>
+            <dt>Page Title</dt>
+            <dd>{{ page.page_title or "(No title)" }}</dd>
+        </div>
+        <div>
+            <dt>Page URL</dt>
+            <dd><span class="redirect-url">{{ page.page_url }}</span></dd>
+        </div>
+    </dl>
+
+    <section class="score-card {% if page.classification == 'Low Concern' %}low-risk{% elif page.classification == 'Suspicious' %}suspicious{% else %}high-risk{% endif %} nested-score">
+        <p class="score-kicker">Page Risk Score</p>
+        <p class="risk-score"><span>{{ page.risk_score }}</span> / 100</p>
+        <p class="classification">{{ page.classification }}</p>
+    </section>
+
+    {% if page.indicators %}
+        {% set ns = namespace(forms=[], language=[], domain=[], other=[]) %}
+        {% for indicator in page.indicators %}
+            {% set key = (indicator.id or indicator.rule or indicator.title or '')|lower %}
+            {% if 'form' in key or 'password' in key or 'credential_input' in key or 'payment' in key or 'personal_identifier' in key %}
+                {% set _ = ns.forms.append(indicator) %}
+            {% elif 'language' in key or 'urgency' in key or 'penalty' in key or 'verification' in key %}
+                {% set _ = ns.language.append(indicator) %}
+            {% elif 'domain' in key or 'brand' in key %}
+                {% set _ = ns.domain.append(indicator) %}
+            {% else %}
+                {% set _ = ns.other.append(indicator) %}
+            {% endif %}
+        {% endfor %}
+
+        {% macro render_page_group(title, items) %}
+        {% if items %}
+        <div class="page-signal-group">
+            <h3>{{ title }}</h3>
+            {% for indicator in items %}
+            <article class="indicator warning">
+                <div class="indicator-header">
+                    <h3>{{ indicator.title }}</h3>
+                    <span class="score">{% if indicator.score_change > 0 %}+{% endif %}{{ indicator.score_change }}</span>
+                </div>
+                {% if indicator.evidence %}
+                <p class="evidence">{{ indicator.evidence }}</p>
+                {% endif %}
+                {% if indicator.explanation %}
+                <p>{{ indicator.explanation }}</p>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endmacro %}
+
+        {{ render_page_group('Forms', ns.forms) }}
+        {{ render_page_group('Language', ns.language) }}
+        {{ render_page_group('Domain Consistency', ns.domain) }}
+        {{ render_page_group('Other Signals', ns.other) }}
+    {% else %}
+    <h3>Detected Page Indicators</h3>
+    <p class="dashboard-muted">No page-content indicators were recorded.</p>
+    {% endif %}
+
+    <h3>Correlation Factors</h3>
+    {% if page.correlations %}
+        {% for correlation in page.correlations %}
+        <article class="indicator warning">
+            <div class="indicator-header">
+                <h3>{{ correlation.title }}</h3>
+                <span class="score">{% if correlation.score_change > 0 %}+{% endif %}{{ correlation.score_change }}</span>
+            </div>
+            {% if correlation.explanation %}
+            <p>{{ correlation.explanation }}</p>
+            {% endif %}
+        </article>
+        {% endfor %}
+    {% else %}
+    <p class="dashboard-muted">No page-content correlation factors were applied.</p>
+    {% endif %}
+
+    {% elif page_status == 'blocked' %}
+    <p class="inspection-status-line">Status: <strong>BLOCKED</strong></p>
+    <div class="inspection-result blocked">
+        <h3>Page inspection blocked for security reasons</h3>
+        <p>{{ page.reason or "The page destination was blocked by PhishLens network safety checks." }}</p>
+    </div>
+
+    {% elif page %}
+    <p class="inspection-status-line">Status: <strong>FAILED</strong></p>
+    <div class="inspection-result failed">
+        <h3>Static page content not inspected</h3>
+        <p>{{ page.reason or "Page inspection could not be completed." }}</p>
+    </div>
+
+    {% elif can_inspect_page %}
+    <p class="inspection-status-line">Status: <strong>AVAILABLE</strong></p>
+    <p>Final destination resolved.</p>
+    <form method="post" action="{{ url_for('inspect_page') }}" class="inspect-form">
+        {% include "_csrf.html" %}
+        <input type="hidden" name="scan_id" value="{{ page_scan_id }}">
+        <button type="submit" class="button button-secondary" data-loading="Inspecting page content…">Inspect Page Content</button>
+    </form>
+    <p class="coverage-alert-note">
+        Performs static HTML inspection without executing JavaScript or loading remote page resources.
+    </p>
+
+    {% elif dest_status == 'blocked' %}
+    <p class="inspection-status-line">Status: <strong>UNAVAILABLE</strong></p>
+    <p class="coverage-alert-note">
+        Page content inspection cannot continue because destination inspection was blocked.
+    </p>
+
+    {% elif dest %}
+    <p class="inspection-status-line">Status: <strong>UNAVAILABLE</strong></p>
+    <p class="coverage-alert-note">
+        Page content inspection is unavailable because the destination prerequisite was not completed.
+    </p>
+
+    {% else %}
+    <p class="inspection-status-line">Status: <strong>WAITING</strong></p>
+    <p class="coverage-alert-note">
+        Page content inspection becomes available after the final destination is successfully resolved.
+    </p>
+    {% endif %}
+</section>

@@ -1,0 +1,40 @@
+{% if combined_assessment and combined_assessment.breakdown %}
+<section class="panel" aria-label="Combined assessment breakdown">
+    <h2>Combined Assessment Breakdown</h2>
+    <div class="breakdown">
+        <div class="breakdown-row">
+            <span>Strongest completed layer ({{ combined_assessment.breakdown.strongest_layer_label | default(combined_assessment.breakdown.strongest_layer) }})</span>
+            <span>{{ combined_assessment.breakdown.strongest_layer_score }}</span>
+        </div>
+        <p class="breakdown-label">Cross-layer correlation</p>
+        {% set adjustments = combined_assessment.breakdown.cross_layer_adjustments or [] %}
+        {% if adjustments %}
+            {% for item in adjustments %}
+            <div class="breakdown-row">
+                <span>{{ item.title }}</span>
+                <span>{% if item.score_change > 0 %}+{% endif %}{{ item.score_change }}</span>
+            </div>
+            {% if item.explanation %}
+            <p class="correlation-explanation">{{ item.explanation }}</p>
+            {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="breakdown-row">
+                <span>None applied</span>
+                <span>+0</span>
+            </div>
+        {% endif %}
+        <div class="breakdown-row">
+            <span>VirusTotal evidence</span>
+            <span>
+                {% set vt = combined_assessment.breakdown.virustotal_adjustment or 0 %}
+                {% if vt > 0 %}+{% endif %}{{ vt }}
+            </span>
+        </div>
+        <div class="breakdown-row breakdown-total">
+            <span>Combined score</span>
+            <span>{{ combined_assessment.breakdown.final_score | default(combined_assessment.score) }}/100</span>
+        </div>
+    </div>
+</section>
+{% endif %}

@@ -1,0 +1,178 @@
+{# Sole Destination Analysis card for URL results / saved scans.
+   Mutually exclusive states from redirect_inspection + destination_status. #}
+{% set dest_scan_id = scan.id if (scan is defined and scan) else scan_id %}
+{% set dest = redirect_inspection if redirect_inspection is defined else none %}
+{% set dest_status = (dest.status if dest else '')|lower %}
+{% set submitted_display = none %}
+{% if dest and dest.submitted_url %}
+    {% set submitted_display = dest.submitted_url %}
+{% elif parsed is defined and parsed and parsed.submitted_url %}
+    {% set submitted_display = parsed.submitted_url %}
+{% elif scan is defined and scan and scan.normalized_url %}
+    {% set submitted_display = scan.normalized_url %}
+{% elif scan is defined and scan and scan.target %}
+    {% set submitted_display = scan.target %}
+{% endif %}
+
+<section class="panel destination-analysis-panel" aria-label="Destination analysis">
+    <h2>Destination Analysis</h2>
+
+    {% if dest_status == 'resolved' %}
+    <p class="inspection-status-line">
+        <span class="status-check" aria-hidden="true">✓</span>
+        <strong>Completed</strong>
+    </p>
+    <p class="coverage-alert-note">
+        PhishLens resolved the redirect destination and performed structural URL analysis.
+        This does not guarantee that the destination is safe or malicious.
+    </p>
+
+    <dl class="details">
+        <div>
+            <dt>Submitted URL</dt>
+            <dd><span class="redirect-url">{{ submitted_display or "Not present" }}</span></dd>
+        </div>
+        <div>
+            <dt>Final Destination</dt>
+            <dd><span class="redirect-url final-url-text">{{ dest.final_url }}</span></dd>
+        </div>
+        <div>
+            <dt>Redirect Count</dt>
+            <dd>{{ dest.redirect_count if dest.redirect_count is not none else 0 }}</dd>
+        </div>
+        <div>
+            <dt>Final Destination Risk</dt>
+            <dd>
+                {{ dest.final_risk_score }}/100 —
+                {{ dest.final_classification }}
+            </dd>
+        </div>
+    </dl>
+
+    {% if dest.hops %}
+    <h3>Redirect Chain</h3>
+    <ol class="redirect-chain">
+        {% for hop in dest.hops %}
+        <li>
+            <span class="redirect-url">{{ hop.url_text }}</span>
+            {% if hop.http_status %}
+            <span class="redirect-status">HTTP {{ hop.http_status }}</span>
+            {% endif %}
+            {% if not loop.last %}
+            <span class="redirect-arrow" aria-hidden="true">↓</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+    {% endif %}
+
+    <section class="score-card {% if dest.final_classification == 'Low Risk' %}low-risk{% elif dest.final_classification == 'Suspicious' %}suspicious{% else %}high-risk{% endif %} nested-score">
+        <p class="score-kicker">Final Destination Risk Score</p>
+        <p class="risk-score"><span>{{ dest.final_risk_score }}</span> / 100</p>
+        <p class="classification">{{ dest.final_classification }}</p>
+        {% if dest.final_recommendation %}
+        <p class="recommendation">{{ dest.final_recommendation }}</p>
+        {% endif %}
+    </section>
+
+    {% if dest.final_indicators %}
+    <h3>Final Destination Indicators</h3>
+    {% for indicator in dest.final_indicators %}
+    <article class="indicator {% if indicator.severity == 'positive' %}positive{% elif indicator.severity == 'warning' %}warning{% endif %}">
+        <div class="indicator-header">
+            <h3>{{ indicator.title }}</h3>
+            <span class="score">{% if indicator.score_change > 0 %}+{% endif %}{{ indicator.score_change }}</span>
+        </div>
+        {% if indicator.evidence %}
+        <p class="evidence">{{ indicator.evidence }}</p>
+        {% endif %}
+        {% if indicator.explanation %}
+        <p>{{ indicator.explanation }}</p>
+        {% endif %}
+    </article>
+    {% endfor %}
+    {% endif %}
+
+    {% elif dest_status == 'blocked' %}
+    <p class="inspection-status-line">Status: <strong>BLOCKED</strong></p>
+    <div class="inspection-result blocked">
+        <h3>Inspection blocked for security reasons</h3>
+        <p>{{ dest.reason or "The destination was blocked by PhishLens network safety checks." }}</p>
+        <p class="coverage-alert-note">
+            A blocked destination is a safety control for PhishLens. It is not automatically treated as phishing.
+        </p>
+    </div>
+    {% if dest.hops %}
+    <h3>Redirect Chain (partial)</h3>
+    <ol class="redirect-chain">
+        {% for hop in dest.hops %}
+        <li>
+            <span class="redirect-url">{{ hop.url_text }}</span>
+            {% if hop.http_status %}
+            <span class="redirect-status">HTTP {{ hop.http_status }}</span>
+            {% endif %}
+            {% if not loop.last %}
+            <span class="redirect-arrow" aria-hidden="true">↓</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+    {% endif %}
+
+    {% elif dest %}
+    <p class="inspection-status-line">Status: <strong>FAILED</strong></p>
+    <div class="inspection-result failed">
+        <h3>Destination inspection failed</h3>
+        <p>{{ dest.reason or "Destination inspection could not be completed." }}</p>
+    </div>
+    {% if dest.hops %}
+    <h3>Redirect Chain (partial)</h3>
+    <ol class="redirect-chain">
+        {% for hop in dest.hops %}
+        <li>
+            <span class="redirect-url">{{ hop.url_text }}</span>
+            {% if hop.http_status %}
+            <span class="redirect-status">HTTP {{ hop.http_status }}</span>
+            {% endif %}
+            {% if not loop.last %}
+            <span class="redirect-arrow" aria-hidden="true">↓</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+    {% endif %}
+
+    {% elif destination_status is defined and destination_status == 'hidden' %}
+    <h3>Hidden Destination</h3>
+    <p>This shortened URL has not been resolved.</p>
+    <p class="coverage-alert-note">
+        The final destination behind this shortened URL has not been inspected.
+    </p>
+    <p class="coverage-alert-meta">Evidence Coverage: <strong>LIMITED</strong></p>
+    <p class="coverage-destination">Final destination: Unknown</p>
+    {% if can_inspect_destination and dest_scan_id %}
+    <form method="post" action="{{ url_for('inspect_destination') }}" class="inspect-form">
+        {% include "_csrf.html" %}
+        <input type="hidden" name="scan_id" value="{{ dest_scan_id }}">
+        <button type="submit" class="button button-secondary" data-loading="Inspecting destination…">Inspect Final Destination</button>
+    </form>
+    <p class="coverage-alert-note">
+        This performs a controlled outbound check to resolve the destination without rendering the webpage.
+    </p>
+    {% endif %}
+
+    {% else %}
+    <p class="inspection-status-line">Status: <strong>NOT INSPECTED</strong></p>
+    <p>The final destination has not been inspected.</p>
+    {% if can_inspect_destination and dest_scan_id %}
+    <form method="post" action="{{ url_for('inspect_destination') }}" class="inspect-form">
+        {% include "_csrf.html" %}
+        <input type="hidden" name="scan_id" value="{{ dest_scan_id }}">
+        <button type="submit" class="button button-secondary" data-loading="Inspecting destination…">Inspect Final Destination</button>
+    </form>
+    <p class="coverage-alert-note">
+        This performs a controlled outbound check to verify the final destination without rendering the webpage.
+    </p>
+    {% endif %}
+    {% endif %}
+</section>

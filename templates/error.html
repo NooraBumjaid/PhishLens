@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}PhishLens | {{ title }}{% endblock %}
+
+{% block content %}
+<main class="page page-home page-error">
+        <section class="hero hero-page error-hero">
+            <div class="hero-decor" aria-hidden="true"></div>
+            <img
+                class="error-logo"
+                src="{{ url_for('static', filename='img/phishlens-logo.png') }}"
+                alt="PhishLens"
+                width="72"
+                height="72"
+            >
+            <p class="hero-pill">PhishLens</p>
+            <h1>{{ heading }}</h1>
+            <p class="hero-lead">{{ message }}</p>
+        </section>
+        <div class="actions">
+            <a class="button button-lift" href="{{ url_for('home') }}">Back to Home</a>
+            <a class="button button-secondary" href="{{ url_for('url_analyzer') }}">URL Analyzer</a>
+            <a class="button button-secondary" href="{{ url_for('history') }}">Scan History</a>
+        </div>
+    </main>
+{% endblock %}

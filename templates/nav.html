@@ -1,0 +1,23 @@
+<header class="topbar">
+    <a class="brand" href="{{ url_for('home') }}">
+        <span class="brand-logo" role="img" aria-label="PhishLens logo"></span>
+        <span class="brand-name">PhishLens</span>
+    </a>
+    <button
+        type="button"
+        class="nav-toggle"
+        id="nav-toggle"
+        aria-controls="site-nav"
+        aria-expanded="false"
+        aria-label="Open menu"
+    >
+        <span class="nav-toggle-bars" aria-hidden="true"></span>
+    </button>
+    <nav class="site-nav" id="site-nav" aria-label="Primary">
+        <a href="{{ url_for('home') }}" {% if request.endpoint == 'home' %}class="is-active" aria-current="page"{% endif %}>Home</a>
+        <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="is-active" aria-current="page"{% endif %}>Dashboard</a>
+        <a href="{{ url_for('url_analyzer') }}" {% if request.endpoint in ['url_analyzer', 'analyze'] %}class="is-active" aria-current="page"{% endif %}>URL Analyzer</a>
+        <a href="{{ url_for('email') }}" {% if request.endpoint in ['email', 'analyze_email'] %}class="is-active" aria-current="page"{% endif %}>Email Analyzer</a>
+        <a href="{{ url_for('history') }}" {% if request.endpoint in ['history', 'scan_detail'] %}class="is-active" aria-current="page"{% endif %}>Scan History</a>
+    </nav>
+</header>

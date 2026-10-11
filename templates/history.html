@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}PhishLens | Scan History{% endblock %}
+
+{% block content %}
+<main class="page page-home">
+        <section class="hero hero-page">
+            <div class="hero-decor" aria-hidden="true"></div>
+            <p class="hero-pill">Saved locally • Searchable • Explainable scores</p>
+            <h1>Scan <span class="hero-emphasis">History</span></h1>
+            <p class="hero-lead">Review previously analyzed URLs and emails with their locally calculated risk results.</p>
+        </section>
+
+        {% if load_error %}
+        <p class="alert alert-error" role="alert">Scan history could not be loaded.</p>
+        {% else %}
+        <div class="stat-grid history-stat-grid">
+            <article class="stat-card">
+                <p class="stat-label">Total Scans</p>
+                <p class="stat-value">{{ statistics.total }}</p>
+            </article>
+            <article class="stat-card stat-low">
+                <p class="stat-label">Low Risk</p>
+                <p class="stat-value">{{ statistics.low_risk }}</p>
+            </article>
+            <article class="stat-card stat-suspicious">
+                <p class="stat-label">Suspicious</p>
+                <p class="stat-value">{{ statistics.suspicious }}</p>
+            </article>
+            <article class="stat-card stat-high">
+                <p class="stat-label">High Risk</p>
+                <p class="stat-value">{{ statistics.high_risk }}</p>
+            </article>
+        </div>
+        <p class="type-breakdown">URL Scans: {{ statistics.url_scans }} · Email Scans: {{ statistics.email_scans }}</p>
+        <p class="privacy-note">Email history stores analysis results and selected metadata only. Full email bodies and attachment contents are not retained.</p>
+
+        <div class="history-toolbar">
+            <form class="history-filters" method="get" action="{{ url_for('history') }}">
+                <label class="visually-hidden" for="history-q">Search</label>
+                <input type="text" id="history-q" name="q" value="{{ search }}" placeholder="Search by URL, subject, or sender…">
+                <label class="visually-hidden" for="history-classification">Assessment</label>
+                <select id="history-classification" name="classification">
+                    <option value="">All assessments</option>
+                    <option value="Low Risk" {% if classification == 'Low Risk' %}selected{% endif %}>Low Risk</option>
+                    <option value="Suspicious" {% if classification == 'Suspicious' %}selected{% endif %}>Suspicious</option>
+                    <option value="High Risk" {% if classification == 'High Risk' %}selected{% endif %}>High Risk</option>
+                </select>
+                <label class="visually-hidden" for="history-type">Scan type</label>
+                <select id="history-type" name="type">
+                    <option value="">All types</option>
+                    <option value="url" {% if scan_type == 'url' %}selected{% endif %}>URL</option>
+                    <option value="email" {% if scan_type == 'email' %}selected{% endif %}>Email</option>
+                </select>
+                <button type="submit">Filter</button>
+            </form>
+            {% if filters_active %}
+            <a class="button button-secondary filter-clear" href="{{ url_for('history') }}">Clear Filters</a>
+            {% endif %}
+        </div>
+
+        {% if statistics.total == 0 %}
+        <section class="panel empty-panel" aria-label="Empty history">
+            <h2>No scans yet</h2>
+            <p>No scans have been saved yet. Analyze a URL or email to create your first scan.</p>
+            <div class="empty-actions">
+                <a class="button button-lift" href="{{ url_for('url_analyzer') }}">Analyze a URL</a>
+                <a class="button button-secondary" href="{{ url_for('email') }}">Analyze an Email</a>
+            </div>
+        </section>
+        {% elif matching_count == 0 %}
+        <section class="panel empty-panel" aria-label="No matching scans">
+            <h2>No matching scans</h2>
+            <p>No scans match your current search or filter.</p>
+            <div class="empty-actions">
+                <a class="button button-secondary" href="{{ url_for('history') }}">Clear Filters</a>
+            </div>
+        </section>
+        {% else %}
+        <p class="result-count">
+            {% if matching_count == 1 %}
+                Showing 1 of 1{% if filters_active %} matching{% endif %} scan.
+            {% else %}
+                Showing {{ range_start }}–{{ range_end }} of {{ matching_count }}{% if filters_active %} matching{% endif %} scans.
+            {% endif %}
+        </p>
+        <div class="history-list">
+            <div class="history-row history-header">
+                <span>Scan ID</span>
+                <span>Type</span>
+                <span>Target</span>
+                <span>Assessment</span>
+                <span>Date</span>
+                <span>Action</span>
+            </div>
+            {% for scan in scans %}
+            <article class="history-row">
+                <span data-label="Scan ID">#{{ scan.id }}</span>
+                <span data-label="Type">
+                    {% if scan.scan_type == 'email' %}
+                    <span class="badge type-badge type-email">EMAIL</span>
+                    {% else %}
+                    <span class="badge type-badge type-url">URL</span>
+                    {% endif %}
+                </span>
+                <span class="history-target" data-label="Target">
+                    {% if scan.scan_type == 'email' %}
+                    <span class="history-target-main" title="{{ scan.email_subject or scan.target }}">{{ scan.email_subject or scan.target }}</span>
+                    {% if scan.email_from %}
+                    <span class="history-target-meta">From: {{ scan.email_from }}</span>
+                    {% endif %}
+                    {% else %}
+                    {% if '://' in (scan.target or '') %}
+                        {% set display_url = scan.target %}
+                    {% else %}
+                        {% set display_url = scan.normalized_url or scan.target %}
+                    {% endif %}
+                    <div class="history-url-row">
+                        <span class="history-target-main history-url-text" title="{{ display_url }}">{{ display_url }}</span>
+                        <button
+                            type="button"
+                            class="copy-url-button"
+                            data-copy-text="{{ display_url }}"
+                            aria-label="Copy full URL {{ display_url }}"
+                            title="Copy full URL"
+                        >
+                            <span aria-hidden="true">⧉</span>
+                            <span class="visually-hidden">Copy URL</span>
+                        </button>
+                    </div>
+                    {% if scan.is_repeated_url %}
+                    <span class="repeated-scan-label" title="This normalized URL appears in {{ scan.url_scan_count }} saved scans">
+                        Repeated Scan · {{ scan.url_scan_count }}×
+                    </span>
+                    {% endif %}
+                    {% endif %}
+                </span>
+                <span data-label="Assessment">
+                    <span class="badge {% if scan.classification == 'Low Risk' %}risk-low{% elif scan.classification == 'Suspicious' %}risk-suspicious{% elif scan.classification == 'High Risk' %}risk-high{% endif %}">{{ scan.classification | upper }}</span>
+                    <span class="history-score-compact">{{ scan.risk_score }}/100</span>
+                </span>
+                <span class="history-date" data-label="Date">{{ scan.created_at | format_timestamp }}</span>
+                <a class="button button-secondary button-compact" href="{{ url_for('scan_detail', scan_id=scan.id) }}">View Details</a>
+            </article>
+            {% endfor %}
+        </div>
+        {% if total_pages > 1 %}
+        <nav class="pagination" aria-label="Scan history pages">
+            {% if page > 1 %}
+            <a class="page-link" href="{{ url_for('history', q=search or none, classification=classification or none, type=scan_type or none, page=page - 1) }}">← Previous</a>
+            {% else %}
+            <span class="page-link is-disabled" aria-disabled="true">← Previous</span>
+            {% endif %}
+            <p class="page-status">Page {{ page }} of {{ total_pages }}</p>
+            {% if page < total_pages %}
+            <a class="page-link" href="{{ url_for('history', q=search or none, classification=classification or none, type=scan_type or none, page=page + 1) }}">Next →</a>
+            {% else %}
+            <span class="page-link is-disabled" aria-disabled="true">Next →</span>
+            {% endif %}
+        </nav>
+        {% endif %}
+        {% endif %}
+        {% endif %}
+    </main>
+{% endblock %}

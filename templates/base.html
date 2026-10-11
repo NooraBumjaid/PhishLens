@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PhishLens{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/phishlens-logo.jpg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261004b">
+    {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% block nav %}
+    {% include "nav.html" %}
+    {% endblock %}
+
+    {% block content %}{% endblock %}
+
+    {% block footer %}
+    {% include "footer.html" %}
+    {% endblock %}
+
+    <script src="{{ url_for('static', filename='js/ui.js') }}?v=20261011a" defer></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

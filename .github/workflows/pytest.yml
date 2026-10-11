@@ -1,0 +1,35 @@
+name: PhishLens tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    name: pytest
+    runs-on: ubuntu-latest
+    env:
+      # Safe CI defaults: no real secrets, no live reputation/destination enablement.
+      PHISHLENS_ENV: development
+      FLASK_DEBUG: "false"
+      FLASK_SECRET_KEY: ci-test-only-secret-key-not-for-production-32
+      ENABLE_REPUTATION_CHECKS: "false"
+      VIRUSTOTAL_API_KEY: ""
+      DATABASE_PATH: ${{ runner.temp }}/phishlens-ci-scans.db
+      TRUST_PROXY_HOPS: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m pytest -q

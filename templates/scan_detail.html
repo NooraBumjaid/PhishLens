@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}PhishLens | Scan Details{% endblock %}
+
+{% block content %}
+<main class="page page-home">
+        <section class="hero hero-page">
+            <div class="hero-decor" aria-hidden="true"></div>
+            <p class="hero-pill">Stored Analysis • Not rechecked</p>
+            <h1>Saved <span class="hero-emphasis">Scan</span></h1>
+        </section>
+
+        {% include "_combined_assessment.html" %}
+
+        <p class="disclaimer-compact">
+            PhishLens uses heuristic and external security evidence. Results are not a guarantee that a website or email is safe or malicious.
+        </p>
+
+        <details class="panel detailed-analysis">
+            <summary>View Detailed Analysis</summary>
+
+        <section class="score-card {% if scan.classification == 'Low Risk' %}low-risk{% elif scan.classification == 'Suspicious' %}suspicious{% else %}high-risk{% endif %} nested-score">
+            <p class="score-kicker">Submitted URL Risk Score</p>
+            <p class="risk-score"><span>{{ scan.risk_score }}</span> / 100</p>
+            <p class="classification">{{ scan.classification }}</p>
+            <div class="coverage-summary structure-status">
+                <p class="coverage-label">URL Structure Analysis</p>
+                <p class="coverage-value coverage-complete">
+                    <span class="status-check" aria-hidden="true">✓</span> Complete
+                </p>
+                {% if destination_status == 'hidden' %}
+                <p class="coverage-destination">Shortened URL — final destination unknown</p>
+                {% elif destination_status == 'resolved' %}
+                <p class="coverage-destination">Destination resolved through safe inspection</p>
+                {% endif %}
+            </div>
+            {% if destination_status == 'hidden' and scan.classification == 'Low Risk' %}
+            <p class="coverage-low-risk-note">Low Risk describes the visible URL characteristics only. The destination has not been inspected.</p>
+            {% endif %}
+            {% if scan.recommendation %}
+            <p class="recommendation">{{ scan.recommendation }}</p>
+            {% endif %}
+        </section>
+
+        {% include "_combined_breakdown.html" %}
+
+        <section class="panel">
+        <h2>Stored Indicators</h2>
+        {% if indicators %}
+            {% for indicator in indicators %}
+            <article class="indicator {% if indicator.severity == 'positive' %}positive{% elif indicator.severity == 'warning' %}warning{% endif %}">
+                <div class="indicator-header">
+                    <h3>{{ indicator.title }}</h3>
+                    <span class="score">{% if indicator.score_change > 0 %}+{% endif %}{{ indicator.score_change }}</span>
+                </div>
+                {% if indicator.severity %}
+                <p class="evidence">{{ indicator.severity }}</p>
+                {% endif %}
+                {% if indicator.evidence %}
+                <p class="evidence">{{ indicator.evidence }}</p>
+                {% endif %}
+                {% if indicator.explanation %}
+                <p>{{ indicator.explanation }}</p>
+                {% endif %}
+            </article>
+            {% endfor %}
+        {% else %}
+        <p>No indicators were stored for this scan.</p>
+        {% endif %}
+        </section>
+
+        <section class="panel">
+        <h2>Stored Correlation Factors</h2>
+        {% if correlations %}
+            {% for correlation in correlations %}
+            <article class="indicator warning">
+                <div class="indicator-header">
+                    <h3>{{ correlation.title }}</h3>
+                    <span class="score">{% if correlation.score_change > 0 %}+{% endif %}{{ correlation.score_change }}</span>
+                </div>
+                {% if correlation.explanation %}
+                <p>{{ correlation.explanation }}</p>
+                {% endif %}
+            </article>
+            {% endfor %}
+        {% else %}
+        <p>No correlation factors were applied to this scan.</p>
+        {% endif %}
+        </section>
+
+        {% include "_destination_analysis.html" %}
+        {% include "_page_content_analysis.html" %}
+        {% include "_reputation_check.html" %}
+
+        <section class="panel">
+        <h2>Scan Information</h2>
+        <dl class="details">
+            <div>
+                <dt>Scan ID</dt>
+                <dd>#{{ scan.id }}</dd>
+            </div>
+            <div>
+                <dt>Target</dt>
+                <dd>{{ scan.target }}</dd>
+            </div>
+            <div>
+                <dt>Normalized URL</dt>
+                <dd>{{ scan.normalized_url }}</dd>
+            </div>
+            <div>
+                <dt>Date</dt>
+                <dd class="history-date">{{ scan.created_at | format_timestamp }}</dd>
+            </div>
+            <div>
+                <dt>Risk Score</dt>
+                <dd>{{ scan.risk_score }}/100</dd>
+            </div>
+            <div>
+                <dt>Classification</dt>
+                <dd>{{ scan.classification }}</dd>
+            </div>
+            <div>
+                <dt>URL Structure Analysis</dt>
+                <dd>Complete</dd>
+            </div>
+            <div>
+                <dt>Destination Status</dt>
+                <dd>{{ destination_status | upper }}</dd>
+            </div>
+        </dl>
+        </section>
+        </details>
+
+        <div class="actions">
+            <a class="button button-lift" href="{{ url_for('history') }}">Back to Scan History</a>
+            <a class="button button-secondary" href="{{ url_for('scan_report', scan_id=scan.id) }}">Download Report (PDF)</a>
+        </div>
+    </main>
+{% endblock %}

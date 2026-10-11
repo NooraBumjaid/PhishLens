@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}PhishLens | URL Analyzer{% endblock %}
+
+{% block body_class %}home{% endblock %}
+
+{% block content %}
+<main class="page page-home">
+    <section class="hero hero-home">
+        <div class="hero-decor" aria-hidden="true"></div>
+        <p class="hero-pill">Local analysis • Explainable results</p>
+        <h1>Suspicious <span class="hero-emphasis">URL Analyzer</span></h1>
+        <p class="hero-lead">Analyze a URL for suspicious characteristics using explainable security indicators.</p>
+    </section>
+    <section class="panel analyzer-card">
+        {% if error %}
+        <p class="alert alert-error" role="alert">{{ error }}</p>
+        {% endif %}
+        <div class="analyzer-heading">
+            <span class="analyzer-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
+                    <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 3.2 19 6.1v5.7c0 4.2-2.8 7.1-7 8.8-4.2-1.7-7-4.6-7-8.8V6.1l7-2.9z"/>
+                    <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M9 12h6"/>
+                </svg>
+            </span>
+            <h2>Analyze a suspicious link</h2>
+        </div>
+        <form class="analyzer-form" action="{{ url_for('analyze') }}" method="post">
+            {% include "_csrf.html" %}
+            <label for="url">Enter a URL to analyze</label>
+            <div class="analyzer-row">
+                <input
+                    type="text"
+                    id="url"
+                    name="url"
+                    placeholder="https://example.com"
+                    required
+                    autocomplete="off"
+                    maxlength="2048"
+                >
+                <button type="submit" data-loading="Analyzing…">
+                    Analyze URL
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/>
+                    </svg>
+                </button>
+            </div>
+        </form>
+        <p class="notice security-notice">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <rect x="6" y="10.5" width="12" height="9" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M8.5 10.5V8.2a3.5 3.5 0 0 1 7 0v2.3"/>
+            </svg>
+            <span>Initial URL analysis is performed locally and does not visit the destination.</span>
+        </p>
+    </section>
+</main>
+{% endblock %}

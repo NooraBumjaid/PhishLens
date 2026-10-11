@@ -1,0 +1,160 @@
+{# Reputation availability + optional lookup UI. Does not call VirusTotal itself. #}
+{% set submitted_check = reputation_checks.get('submitted_url') if reputation_checks else none %}
+{% set final_check = reputation_checks.get('final_url') if reputation_checks else none %}
+{% set avail_status = reputation.status if reputation else 'disabled' %}
+
+<section class="panel reputation-panel" id="reputation-check">
+    <h2>Reputation Check</h2>
+
+    <dl class="details">
+        <div>
+            <dt>Provider</dt>
+            <dd>{{ reputation.provider if reputation else 'VirusTotal' }}</dd>
+        </div>
+        <div>
+            <dt>Status</dt>
+            <dd>
+                {% if avail_status == 'disabled' %}
+                Not enabled
+                {% elif avail_status == 'not_configured' %}
+                Not configured
+                {% elif avail_status == 'available' %}
+                Available
+                {% else %}
+                {{ reputation.message if reputation else 'Not enabled' }}
+                {% endif %}
+            </dd>
+        </div>
+    </dl>
+
+    <p class="coverage-alert-note reputation-privacy">
+        External reputation checks may share the analyzed URL with the configured provider.
+    </p>
+    <p class="coverage-alert-note">
+        This check sends the URL to the configured reputation provider for an existing reputation lookup.
+    </p>
+    <p class="coverage-alert-note">
+        Reputation results provide external evidence and should be interpreted together with PhishLens’s local analysis.
+    </p>
+    <p class="coverage-alert-note">
+        No detections does not guarantee that a URL is safe.
+    </p>
+
+    {% if can_check_reputation and scan_id is defined and scan_id %}
+    <form method="post" action="{{ url_for('check_reputation') }}" class="inspect-form">
+        {% include "_csrf.html" %}
+        <input type="hidden" name="scan_id" value="{{ scan_id }}">
+        <input type="hidden" name="target_type" value="submitted_url">
+        <button type="submit" class="button button-secondary" data-loading="Checking reputation…">Check Reputation</button>
+        <span class="dashboard-muted">Submitted URL</span>
+    </form>
+    {% elif can_check_reputation and scan is defined and scan %}
+    <form method="post" action="{{ url_for('check_reputation') }}" class="inspect-form">
+        {% include "_csrf.html" %}
+        <input type="hidden" name="scan_id" value="{{ scan.id }}">
+        <input type="hidden" name="target_type" value="submitted_url">
+        <button type="submit" class="button button-secondary" data-loading="Checking reputation…">Check Reputation</button>
+        <span class="dashboard-muted">Submitted URL</span>
+    </form>
+    {% endif %}
+
+    {% if can_check_final_reputation is defined and can_check_final_reputation %}
+    <form method="post" action="{{ url_for('check_reputation') }}" class="inspect-form">
+        {% include "_csrf.html" %}
+        <input type="hidden" name="scan_id" value="{% if scan is defined and scan %}{{ scan.id }}{% else %}{{ scan_id }}{% endif %}">
+        <input type="hidden" name="target_type" value="final_url">
+        <button type="submit" class="button button-secondary" data-loading="Checking reputation…">Check Reputation</button>
+        <span class="dashboard-muted">Final Destination</span>
+    </form>
+    {% endif %}
+    <p class="coverage-alert-note">External reputation is supporting evidence and may change over time.</p>
+
+    {% macro render_reputation_result(title, check) %}
+    <section class="reputation-result">
+        <h3>{{ title }}</h3>
+        {% if not check %}
+        <p class="reputation-status">Not checked</p>
+        {% else %}
+        {% set st = check.status %}
+        {% set malicious = check.malicious_count if check.malicious_count is not none else check.malicious %}
+        {% set suspicious = check.suspicious_count if check.suspicious_count is not none else check.suspicious %}
+        {% set harmless = check.harmless_count if check.harmless_count is not none else check.harmless %}
+        {% set undetected = check.undetected_count if check.undetected_count is not none else check.undetected %}
+        {% set total = check.total_engines %}
+
+        <dl class="details">
+            <div>
+                <dt>Provider</dt>
+                <dd>{{ check.provider or 'VirusTotal' }}</dd>
+            </div>
+            <div>
+                <dt>Status</dt>
+                <dd>
+                    {% if st == 'completed' %}Completed
+                    {% elif st == 'unknown' %}No existing reputation record
+                    {% elif st == 'rate_limited' %}Provider rate limit reached
+                    {% elif st == 'failed' %}Unavailable
+                    {% elif st == 'disabled' %}Not enabled
+                    {% elif st == 'not_configured' %}Not configured
+                    {% else %}{{ st }}{% endif %}
+                </dd>
+            </div>
+            {% if check.target_url %}
+            <div>
+                <dt>Checked URL</dt>
+                <dd><span class="redirect-url">{{ check.target_url }}</span></dd>
+            </div>
+            {% endif %}
+            {% if check.checked_at %}
+            <div>
+                <dt>Checked</dt>
+                <dd class="history-date">{{ check.checked_at | format_timestamp }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+
+        {% if check.message %}
+        <p class="reputation-status">{{ check.message }}</p>
+        {% endif %}
+
+        {% if st == 'completed' and malicious is not none %}
+        <h4>Security Engine Results</h4>
+        <div class="reputation-counts" role="list">
+            <div class="reputation-count rep-malicious" role="listitem">
+                <span class="rep-label">Malicious</span>
+                <span class="rep-value">{{ malicious }}</span>
+            </div>
+            <div class="reputation-count rep-suspicious" role="listitem">
+                <span class="rep-label">Suspicious</span>
+                <span class="rep-value">{{ suspicious }}</span>
+            </div>
+            <div class="reputation-count rep-harmless" role="listitem">
+                <span class="rep-label">Harmless</span>
+                <span class="rep-value">{{ harmless }}</span>
+            </div>
+            <div class="reputation-count rep-undetected" role="listitem">
+                <span class="rep-label">Undetected</span>
+                <span class="rep-value">{{ undetected }}</span>
+            </div>
+            <div class="reputation-count rep-total" role="listitem">
+                <span class="rep-label">Total</span>
+                <span class="rep-value">{{ total }}</span>
+            </div>
+        </div>
+        {% elif st == 'unknown' %}
+        <p class="reputation-status">No existing reputation record</p>
+        {% elif st == 'rate_limited' %}
+        <p class="reputation-status">Reputation check temporarily unavailable. Provider rate limit reached.</p>
+        {% elif st == 'failed' %}
+        <p class="reputation-status">{{ check.message or 'Reputation check unavailable.' }}</p>
+        {% endif %}
+        {% endif %}
+    </section>
+    {% endmacro %}
+
+    {{ render_reputation_result('Submitted URL Reputation', submitted_check) }}
+
+    {% if (redirect_inspection is defined and redirect_inspection and redirect_inspection.status == 'resolved') or final_check %}
+    {{ render_reputation_result('Final Destination Reputation', final_check) }}
+    {% endif %}
+</section>

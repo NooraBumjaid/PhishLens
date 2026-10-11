@@ -1,0 +1,165 @@
+{% if combined_assessment %}
+<section
+    class="panel combined-assessment assessment-{{ combined_assessment.assessment }}"
+    aria-label="PhishLens assessment"
+>
+    <p class="score-kicker">PhishLens Assessment</p>
+    <p class="risk-score assessment-top-score">
+        {# `is not none` is true for Jinja Undefined — use `is number` + layer fallbacks. #}
+        {% if combined_assessment.score is number %}
+        <span>{{ combined_assessment.score }}</span> / 100
+        {% elif risk is defined and risk.final_score is number %}
+        <span>{{ risk.final_score }}</span> / 100
+        {% elif scan is defined and scan.risk_score is number %}
+        <span>{{ scan.risk_score }}</span> / 100
+        {% else %}
+        <span>—</span> / 100
+        {% endif %}
+    </p>
+    <p class="classification combined-label">
+        <span class="classification-badge assessment-badge">{{ combined_assessment.label | upper }}</span>
+    </p>
+
+    <div class="coverage-summary">
+        <p class="coverage-label">Evidence Coverage</p>
+        <p class="coverage-value coverage-{{ combined_assessment.coverage }}">
+            {{ combined_assessment.coverage_label | default(combined_assessment.coverage | upper) }}
+        </p>
+        <p class="coverage-alert-note">Evidence coverage describes how many checks completed. It is not a safety score.</p>
+    </div>
+
+    <div
+        class="assessment-visual assessment-visual-{{ combined_assessment.assessment }}"
+        role="img"
+        aria-label="Assessment {{ combined_assessment.label }}, evidence coverage {{ combined_assessment.coverage_label | default(combined_assessment.coverage | upper) }}"
+    >
+        <span class="assessment-visual-bar" aria-hidden="true"></span>
+    </div>
+
+    {% if combined_assessment.summary %}
+    <p class="recommendation">{{ combined_assessment.summary }}</p>
+    {% endif %}
+
+    <h3>Why this assessment?</h3>
+    {% if combined_assessment.reasons %}
+    <ul class="assessment-reasons">
+        {% for reason in combined_assessment.reasons %}
+        <li><span class="reason-mark" aria-hidden="true">⚠</span> {{ reason }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="coverage-alert-note">No major warning reasons were recorded for the completed checks.</p>
+    {% endif %}
+
+    <div class="recommendation-box">
+        <h3>Recommendation</h3>
+        <p class="recommendation">{{ combined_assessment.recommendation }}</p>
+    </div>
+
+    {% if combined_assessment.layers_not_checked %}
+    <h3>Not Checked</h3>
+    <ul class="assessment-missing">
+        {% for layer in combined_assessment.layers_not_checked %}
+        <li>
+            {% if layer == 'final_destination' or layer == 'final_url' %}Final destination
+            {% elif layer == 'page_content' %}Page content
+            {% elif layer == 'external_reputation' %}External reputation
+            {% elif layer == 'submitted_url' %}Submitted URL
+            {% else %}{{ layer }}{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+
+<section class="panel multilayer-summary" aria-label="PhishLens analysis summary">
+    <h2>PhishLens Analysis</h2>
+    <ul class="layer-score-list">
+        <li>
+            <span class="layer-label">Submitted URL</span>
+            <span class="layer-value">
+                {% if risk is defined and risk %}
+                {{ risk.final_score }}/100 — {{ risk.classification }}
+                {% elif scan is defined and scan %}
+                {{ scan.risk_score }}/100 — {{ scan.classification }}
+                {% else %}
+                Not available
+                {% endif %}
+            </span>
+        </li>
+        <li>
+            <span class="layer-label">Final Destination</span>
+            {% if redirect_inspection and redirect_inspection.status == 'resolved' %}
+            <span class="layer-value">{{ redirect_inspection.final_risk_score }}/100 — {{ redirect_inspection.final_classification }}</span>
+            {% elif redirect_inspection and redirect_inspection.status == 'blocked' %}
+            <span class="layer-value">BLOCKED</span>
+            {% else %}
+            <span class="layer-value">Not inspected</span>
+            {% endif %}
+        </li>
+        <li>
+            <span class="layer-label">Static Page Content</span>
+            {% if page_inspection and page_inspection.status == 'completed' %}
+            <span class="layer-value">{{ page_inspection.risk_score }}/100 — {{ page_inspection.classification }}</span>
+            {% else %}
+            <span class="layer-value">Not inspected</span>
+            {% endif %}
+        </li>
+        <li>
+            <span class="layer-label">External Reputation</span>
+            {% set rep = none %}
+            {% if reputation_checks %}
+                {% set rep = reputation_checks.get('final_url') or reputation_checks.get('submitted_url') %}
+            {% endif %}
+            {% if rep and rep.status == 'completed' %}
+            <span class="layer-value">
+                VirusTotal —
+                {{ rep.malicious_count if rep.malicious_count is not none else rep.malicious }} malicious,
+                {{ rep.suspicious_count if rep.suspicious_count is not none else rep.suspicious }} suspicious
+            </span>
+            {% elif rep and rep.status == 'unknown' %}
+            <span class="layer-value">VirusTotal — No existing record</span>
+            {% elif reputation and reputation.status == 'disabled' %}
+            <span class="layer-value">Not enabled</span>
+            {% elif reputation and reputation.status == 'not_configured' %}
+            <span class="layer-value">Not configured</span>
+            {% else %}
+            <span class="layer-value">Not checked</span>
+            {% endif %}
+        </li>
+    </ul>
+    <div class="coverage-checklist">
+        <p class="coverage-label">Checked layers</p>
+        <ul>
+            <li>URL Structure <span class="cov-ok">✓ Checked</span></li>
+            <li>Redirect Destination
+                {% if redirect_inspection and redirect_inspection.status == 'resolved' %}
+                <span class="cov-ok">✓ Checked</span>
+                {% elif redirect_inspection and redirect_inspection.status == 'blocked' %}
+                <span class="cov-pending">— Blocked</span>
+                {% else %}
+                <span class="cov-pending">— Not checked</span>
+                {% endif %}
+            </li>
+            <li>Static Page Content
+                {% if page_inspection and page_inspection.status == 'completed' %}
+                <span class="cov-ok">✓ Checked</span>
+                {% else %}
+                <span class="cov-pending">— Not checked</span>
+                {% endif %}
+            </li>
+            <li>External Reputation
+                {% if reputation and reputation.status == 'disabled' %}
+                <span class="cov-pending">— Not enabled</span>
+                {% elif reputation and reputation.status == 'not_configured' %}
+                <span class="cov-pending">— Not configured</span>
+                {% elif reputation_checks and (reputation_checks.get('submitted_url') or reputation_checks.get('final_url')) %}
+                <span class="cov-ok">✓ Checked</span>
+                {% else %}
+                <span class="cov-pending">— Not checked</span>
+                {% endif %}
+            </li>
+        </ul>
+    </div>
+</section>
+{% endif %}

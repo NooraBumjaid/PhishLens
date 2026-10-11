@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}PhishLens | Analysis Result{% endblock %}
+
+{% block content %}
+<main class="page page-home">
+    <section class="hero hero-page">
+        <div class="hero-decor" aria-hidden="true"></div>
+        <p class="hero-pill">Combined evidence • Explainable layers</p>
+        <h1>URL <span class="hero-emphasis">Analysis Result</span></h1>
+        <p class="hero-lead">Review the PhishLens assessment first, then open detailed layers if needed.</p>
+    </section>
+
+    {% include "_combined_assessment.html" %}
+
+    {% if scan_id %}
+    <p class="scan-id"><a href="{{ url_for('scan_detail', scan_id=scan_id) }}">Scan ID: #{{ scan_id }}</a></p>
+    {% endif %}
+    {% if save_error %}
+    <p class="alert alert-error" role="alert">{{ save_error }}</p>
+    {% endif %}
+
+    <p class="disclaimer-compact">
+        PhishLens uses heuristic and external security evidence. Results are not a guarantee that a website or email is safe or malicious.
+    </p>
+
+    <details class="panel detailed-analysis">
+        <summary>View Detailed Analysis</summary>
+
+        <section class="score-card {% if risk.classification == 'Low Risk' %}low-risk{% elif risk.classification == 'Suspicious' %}suspicious{% else %}high-risk{% endif %} nested-score">
+            <p class="score-kicker">Submitted URL Risk Score</p>
+            <p class="risk-score"><span>{{ risk.final_score }}</span> / 100</p>
+            <p class="classification"><span class="classification-badge">{{ risk.classification | upper }}</span></p>
+            <div class="coverage-summary structure-status">
+                <p class="coverage-label">URL Structure Analysis</p>
+                <p class="coverage-value coverage-complete">
+                    <span class="status-check" aria-hidden="true">✓</span> Complete
+                </p>
+                {% if destination_status == 'hidden' %}
+                <p class="coverage-destination">Shortened URL — final destination unknown</p>
+                {% endif %}
+            </div>
+            {% if destination_status == 'hidden' and risk.classification == 'Low Risk' %}
+            <p class="coverage-low-risk-note">Low Risk describes the visible URL characteristics only. The destination has not been inspected.</p>
+            {% endif %}
+            <p class="score-note">The submitted-URL risk score is a rule-based assessment and should not be interpreted as a probability that the website is malicious.</p>
+        </section>
+
+        <section class="panel">
+            <h2>Submitted URL Score Breakdown</h2>
+            <div class="breakdown">
+                <div class="breakdown-row">
+                    <span>Base Score</span>
+                    <span>{{ risk.base_score }}</span>
+                </div>
+                <p class="breakdown-label">Detected indicators</p>
+                {% for indicator in indicators %}
+                <div class="breakdown-row">
+                    <span>{{ indicator.title }}</span>
+                    <span>{% if indicator.score_change > 0 %}+{% endif %}{{ indicator.score_change }}</span>
+                </div>
+                {% else %}
+                <p>No indicator contributions.</p>
+                {% endfor %}
+                <p class="breakdown-label">Correlation factors</p>
+                <p class="correlation-note">Correlation factors represent combinations of existing indicators that may be more concerning when they occur together.</p>
+                {% for correlation in risk.correlations %}
+                <div class="breakdown-row">
+                    <span>{{ correlation.title }}</span>
+                    <span>{% if correlation.score_change > 0 %}+{% endif %}{{ correlation.score_change }}</span>
+                </div>
+                <p class="correlation-explanation">{{ correlation.explanation }}</p>
+                {% else %}
+                <p>No correlation factors.</p>
+                {% endfor %}
+                <div class="breakdown-row breakdown-total">
+                    <span>Raw Score</span>
+                    <span>{{ risk.raw_score }}</span>
+                </div>
+                <div class="breakdown-row">
+                    <span>Final Risk Score</span>
+                    <span>{{ risk.final_score }}/100</span>
+                </div>
+            </div>
+        </section>
+
+        {% include "_combined_breakdown.html" %}
+
+        <section class="panel">
+            <h2>Security Indicators</h2>
+            {% if indicators %}
+                {% for indicator in indicators %}
+                <article class="indicator {{ indicator.severity }}">
+                    <div class="indicator-header">
+                        <h3>{{ indicator.title }}</h3>
+                        <span class="score">{% if indicator.score_change > 0 %}+{% endif %}{{ indicator.score_change }}</span>
+                    </div>
+                    {% if indicator.evidence %}
+                    <p class="evidence">{{ indicator.evidence }}</p>
+                    {% endif %}
+                    <p>{{ indicator.explanation }}</p>
+                </article>
+                {% endfor %}
+            {% else %}
+                <p>No security indicators were detected for these rules.</p>
+            {% endif %}
+        </section>
+
+        {% if scan_id %}
+            {% include "_destination_analysis.html" %}
+            {% include "_page_content_analysis.html" %}
+            {% include "_reputation_check.html" %}
+        {% endif %}
+
+        <section class="panel">
+            <h2>Parsed URL</h2>
+            <dl class="details">
+                <div>
+                    <dt>Submitted URL</dt>
+                    <dd class="wrap-text">{{ parsed.submitted_url }}</dd>
+                </div>
+                <div>
+                    <dt>Normalized URL</dt>
+                    <dd class="wrap-text">{{ parsed.normalized_url }}</dd>
+                </div>
+                <div>
+                    <dt>Scheme</dt>
+                    <dd>{{ parsed.scheme }}</dd>
+                </div>
+                <div>
+                    <dt>Hostname</dt>
+                    <dd>{{ parsed.hostname }}</dd>
+                </div>
+                <div>
+                    <dt>Port</dt>
+                    <dd>{% if parsed.port is not none %}{{ parsed.port }}{% else %}Not present{% endif %}</dd>
+                </div>
+                <div>
+                    <dt>Path</dt>
+                    <dd class="wrap-text">{% if parsed.path %}{{ parsed.path }}{% else %}Not present{% endif %}</dd>
+                </div>
+                <div>
+                    <dt>Query</dt>
+                    <dd class="wrap-text">{% if parsed.query %}{{ parsed.query }}{% else %}Not present{% endif %}</dd>
+                </div>
+            </dl>
+        </section>
+    </details>
+
+    <div class="actions">
+        <a class="button button-lift" href="{{ url_for('url_analyzer') }}">Analyze Another URL</a>
+        {% if scan_id %}
+        <a class="button button-secondary" href="{{ url_for('scan_report', scan_id=scan_id) }}">Download Report (PDF)</a>
+        {% endif %}
+        <a class="button button-secondary" href="{{ url_for('history') }}">View Scan History</a>
+    </div>
+</main>
+{% endblock %}

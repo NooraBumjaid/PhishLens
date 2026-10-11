@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}PhishLens | Security Analysis{% endblock %}
+
+{% block body_class %}landing{% endblock %}
+
+{% block content %}
+<main class="landing-page">
+    <div class="landing-layout">
+        <section class="home-hero">
+            <div class="brand-orbit" aria-hidden="true"></div>
+            <img
+                class="home-logo"
+                src="{{ url_for('static', filename='img/phishlens-logo.png') }}"
+                alt="PhishLens. See the signals. Spot the risk."
+            >
+            <h1 class="visually-hidden">PhishLens</h1>
+            <p class="visually-hidden">See the signals. Spot the risk.</p>
+            <p class="visually-hidden">Analyze suspicious URLs and emails using explainable security indicators.</p>
+        </section>
+        <section class="tool-panel" aria-label="Analysis tools">
+            <h2>Choose an analysis tool</h2>
+            <p class="home-support">Start with a URL or email analysis, or review your local security dashboard.</p>
+            <div class="tool-grid">
+                <a class="tool-card tool-url" href="{{ url_for('url_analyzer') }}">
+                    <span class="tool-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
+                            <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M10 13.2a4 4 0 0 0 5.7.2l2.2-2.2a4 4 0 0 0-5.7-5.6L11 6.8"/>
+                            <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M14 10.8a4 4 0 0 0-5.7-.2l-2.2 2.2a4 4 0 0 0 5.7 5.6L13 17.2"/>
+                        </svg>
+                    </span>
+                    <span class="tool-copy">
+                        <h3>URL Analyzer</h3>
+                        <p class="tool-description">Inspect URL structure, redirects, page signals, and optional reputation evidence.</p>
+                        <span class="tool-cta">Analyze URL</span>
+                    </span>
+                    <span class="tool-action" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
+                            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/>
+                        </svg>
+                    </span>
+                </a>
+                <a class="tool-card tool-email" href="{{ url_for('email') }}">
+                    <span class="tool-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
+                            <rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                            <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M5 7.5 12 13l7-5.5"/>
+                        </svg>
+                    </span>
+                    <span class="tool-copy">
+                        <h3>Email Analyzer</h3>
+                        <p class="tool-description">Inspect email headers, content, links, and common phishing indicators.</p>
+                        <span class="tool-cta">Analyze Email</span>
+                    </span>
+                    <span class="tool-action" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
+                            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/>
+                        </svg>
+                    </span>
+                </a>
+                <a class="tool-card tool-dashboard" href="{{ url_for('dashboard') }}">
+                    <span class="tool-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
+                            <rect x="4" y="4" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                            <rect x="13" y="4" width="7" height="4.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                            <rect x="13" y="11" width="7" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                            <rect x="4" y="14" width="7" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                        </svg>
+                    </span>
+                    <span class="tool-copy">
+                        <h3>Security Dashboard</h3>
+                        <p class="tool-description">View analysis activity, risk trends, and recent PhishLens results.</p>
+                        <span class="tool-cta">View Dashboard</span>
+                    </span>
+                    <span class="tool-action" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
+                            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/>
+                        </svg>
+                    </span>
+                    <span class="visually-hidden">Open Dashboard</span>
+                </a>
+            </div>
+        </section>
+    </div>
+    <aside class="trust-strip" aria-label="Product principles">
+        <p>Explainable analysis <span aria-hidden="true">•</span> Controlled destination inspection <span aria-hidden="true">•</span> Privacy-conscious storage</p>
+    </aside>
+</main>
+{% endblock %}
